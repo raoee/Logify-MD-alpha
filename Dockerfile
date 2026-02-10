@@ -1,40 +1,18 @@
-# 1. THE BUILD STAGE (Compiling the Frontend)
-# We use a Node.js image to build the React app
-FROM node:18-alpine as build-stage
+# Use Node 18
+FROM node:18-alpine
 
-# Create a folder for the build
+# Set working directory
 WORKDIR /app
 
-# Copy the package.json to install libraries
-COPY package*.json ./
+# 1. Copy package files first (to cache dependencies)
+COPY package.json package-lock.json* ./
 
-# Install the libraries
+# 2. Install dependencies (Crucial Step!)
 RUN npm install
 
-# Copy the rest of your app code
-COPY . .
+# 3. Copy the built website and server code
+COPY dist ./dist
+COPY server.js .
 
-# Build the React App (Creates the 'dist' folder)
-RUN npm run build
-
-# ---------------------------------------------------
-
-# 2. THE PRODUCTION STAGE (Running the Server)
-# We start fresh to keep the final box small
-FROM node:18-alpine as production-stage
-
-WORKDIR /app
-
-# Copy only the necessary files from the build stage
-COPY --from=build-stage /app/package*.json ./
-COPY --from=build-stage /app/server.js ./
-COPY --from=build-stage /app/dist ./dist
-
-# Install ONLY production libraries (keeps it fast)
-RUN npm install --production
-
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Start the server
+# 4. Start the server
 CMD ["node", "server.js"]

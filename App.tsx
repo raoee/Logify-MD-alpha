@@ -214,8 +214,8 @@ const LoginScreen = ({ onLogin, installButton }: { onLogin: (u: User) => void, i
   const [pendingRestore, setPendingRestore] = useState<{ meta: any, content: string } | null>(null);
 
   useEffect(() => {
-    // Check if we need to set up the vault or just login
-    setIsFirstRun(!storageService.hasVault());
+    // ALWAYS show the login screen. No more "First Run" setup.
+    setIsFirstRun(false); 
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -229,14 +229,24 @@ const LoginScreen = ({ onLogin, installButton }: { onLogin: (u: User) => void, i
     setError('');
     
     try {
-      const user = await storageService.login(username, password);
-      if (user) {
-        onLogin(user);
+      // TALK TO THE SERVER (ZimaBoard)
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        storageService.saveUserSession(result.user); 
+        onLogin(result.user);
       } else {
-        setError('Invalid credentials / Wrong Password');
+        setError(result.error || 'Invalid credentials');
       }
     } catch (err) {
-      setError('Login failed');
+      console.error(err);
+      setError('Connection failed. Is the server running?');
     } finally {
       setLoading(false);
     }
@@ -459,7 +469,8 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
   useEffect(() => {
     const fetchRecords = async () => {
        try {
-         const response = await fetch(`http://localhost:3000/api/records/${project.id}`);
+         // Make sure there is a quote ' after records/ and a + sign
+         const response = await fetch('/api/records/' + project.id);
          const sqlRows = await response.json();
 
          const mappedData = sqlRows.map((row: any) => ({
@@ -1149,7 +1160,7 @@ export default function App() {
 
     try {
       // 2. Send to your Laptop Server
-      const response = await fetch('http://localhost:3000/api/submit', {
+      const response = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1178,10 +1189,12 @@ export default function App() {
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
+  // REPLACE THE FINAL RETURN STATEMENT WITH THIS:
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center sticky top-0 z-20">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      
+      {/* Header with z-50 to stay on top */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('dashboard'); setActiveProjectId(''); }}>
           <div className="bg-blue-600 p-1 rounded-lg">
              <Logo className="w-6 h-6 text-white" />
@@ -1216,8 +1229,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-auto relative">
+      {/* Main Content - Removed overflow-auto to let browser handle scrolling */}
+      <main className="flex-1 relative pb-20">
         {view === 'dashboard' && (
           <ProjectDashboard 
             projects={projects} 
@@ -1238,7 +1251,7 @@ export default function App() {
           <DataSync 
             onBack={() => setView('dashboard')} 
             onRestoreComplete={() => {
-              handleLogout(); // Force relogin after restore to re-establish trust/keys
+              handleLogout(); 
             }} 
           />
         )}
@@ -1252,11 +1265,11 @@ export default function App() {
         )}
 
         {(view === 'data-entry' || view === 'data-view') && activeProject && (
-          <div className="p-6 max-w-4xl mx-auto">
-             <div className="flex items-center gap-4 mb-6">
+          <div className="p-4 md:p-6 max-w-4xl mx-auto">
+             <div className="flex items-center gap-4 mb-6 sticky top-[60px] z-40 bg-gray-50/90 backdrop-blur py-2">
                <Button variant="ghost" onClick={() => setView('dashboard')}><Icons.ChevronLeft /> Back</Button>
-               <h2 className="text-2xl font-bold">{activeProject.name}</h2>
-               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">{view === 'data-entry' ? 'Collection Mode' : 'View Mode'}</span>
+               <h2 className="text-xl font-bold truncate flex-1">{activeProject.name}</h2>
+               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase whitespace-nowrap hidden sm:block">{view === 'data-entry' ? 'Collection Mode' : 'View Mode'}</span>
              </div>
              
              {view === 'data-entry' ? (
