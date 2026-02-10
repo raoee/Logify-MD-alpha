@@ -1,0 +1,7 @@
+{
+  "name": "Logify MD",
+  "description": "A secure, mobile-first data collection tool for hospital audits and clinical research. Features customizable forms, AI-assisted schema generation, and local data export.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

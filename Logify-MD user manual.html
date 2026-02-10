@@ -1,0 +1,203 @@
+html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logify MD User Manual</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px; background-color: #f9f9f9; }
+    .container { background-color: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+    h2 { color: #34495e; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    h3 { color: #16a085; margin-top: 25px; }
+    code { background-color: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-family: Consolas, monospace; color: #c7254e; }
+    pre { background-color: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: Consolas, monospace; }
+    .note { background-color: #e8f6f3; border-left: 5px solid #1abc9c; padding: 15px; margin: 20px 0; }
+    .warning { background-color: #fcf3cf; border-left: 5px solid #f1c40f; padding: 15px; margin: 20px 0; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #3498db; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    .footer { margin-top: 40px; text-align: center; font-size: 0.8em; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>📘 Logify MD: User Manual & Deployment Guide</h1>
+    <p><strong>Version:</strong> 1.0 (Universal NoSQL Model)<br>
+    <strong>Target Audience:</strong> Clinical Leads, Audit Managers, Doctors</p>
+
+    <h2>1. Introduction</h2>
+    <p><strong>Logify MD</strong> is a "Universal" clinical data collection app. Unlike traditional hospital software that requires a programmer to add new fields (like "Ferritin" or "Covid Status"), Logify MD allows you to <strong>invent new forms on the fly</strong>.</p>
+    <ul>
+        <li><strong>Frontend:</strong> The screen you see (React).</li>
+        <li><strong>Backend:</strong> The "clerk" that handles data (Node.js).</li>
+        <li><strong>Database:</strong> The "filing cabinet" (MariaDB/SQL).</li>
+    </ul>
+
+    <h2>2. Software Requirements (The Toolbelt)</h2>
+    <p>Before you can run the app, you need three pieces of free software installed on the "Host Computer" (the laptop or server running the system).</p>
+    
+    <h3>1. Node.js (LTS Version)</h3>
+    <ul>
+        <li><strong>What it is:</strong> The engine that runs the application.</li>
+        <li><strong>Download:</strong> <a href="https://nodejs.org/" target="_blank">nodejs.org</a> (Choose "LTS" - Long Term Support).</li>
+        <li><strong>Action:</strong> Install it and just click "Next" until finished.</li>
+    </ul>
+
+    <h3>2. Visual Studio Code (VS Code)</h3>
+    <ul>
+        <li><strong>What it is:</strong> The control panel where you will start and stop the app.</li>
+        <li><strong>Download:</strong> <a href="https://code.visualstudio.com/" target="_blank">code.visualstudio.com</a></li>
+    </ul>
+
+    <h3>3. MariaDB or XAMPP (The Database)</h3>
+    <ul>
+        <li><strong>What it is:</strong> The place where data is actually stored.</li>
+        <li><strong>Note:</strong> If you already have a hospital SQL server, you can use that. If not, install <strong>XAMPP</strong> to get a local database running quickly.</li>
+    </ul>
+
+    <h2>3. Database Setup (The Filing Cabinet)</h2>
+    <p>You need to create the "Universal Vault" inside your SQL database. This only needs to be done <strong>once</strong>.</p>
+    <ol>
+        <li>Open your Database Manager (e.g., <strong>phpMyAdmin</strong> or <strong>HeidiSQL</strong>).</li>
+        <li>Create a new Database named: <code>research_data</code> (or select your existing one).</li>
+        <li>Go to the <strong>SQL</strong> tab.</li>
+        <li><strong>Copy and Paste</strong> this command to create the master storage table:</li>
+    </ol>
+
+<pre>
+CREATE TABLE IF NOT EXISTS study_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id VARCHAR(50) NOT NULL,    -- e.g. "Hematology_Audit_2026"
+    patient_mrn VARCHAR(50),            -- e.g. "MRN-12345"
+    data_payload JSON,                  -- Stores ALL fields (Age, Hb, Diagnosis...)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+</pre>
+    <p>5. Click <strong>Go / Run</strong>. You should see a green success message.</p>
+
+    <h2>4. Configuration (Connecting the Wires)</h2>
+    <p>Now you must tell the "Clerk" (Server) where the "Filing Cabinet" (Database) is located.</p>
+    <ol>
+        <li>Open the project folder in <strong>VS Code</strong>.</li>
+        <li>Open the file named <code>server.js</code>.</li>
+        <li>Look for the <code>DB_CONFIG</code> section at the top. Update it with your specific details:</li>
+    </ol>
+
+<pre>
+const DB_CONFIG = {
+  host: 'localhost',       // Use 'localhost' if DB is on this laptop. Use IP if on server.
+  user: 'root',            // Your Database Username
+  password: 'your_password', // Your Database Password
+  database: 'research_data' // The name of the database you created in Step 3
+};
+</pre>
+    <p>4. <strong>Save</strong> the file (<code>Ctrl + S</code>).</p>
+
+    <h2>5. How to Run the App (Daily Routine)</h2>
+    <p>To start the application, you need to turn on both the <strong>Backend</strong> (Server) and <strong>Frontend</strong> (Screen).</p>
+
+    <h3>Step A: Open the Terminal</h3>
+    <p>In VS Code, go to the top menu: <strong>Terminal &rarr; New Terminal</strong>.</p>
+
+    <h3>Step B: Start the Server (The Backend)</h3>
+    <ol>
+        <li>In the terminal, type: <code>node server.js</code></li>
+        <li>Press <strong>Enter</strong>.</li>
+        <li>You should see: <span style="color: green;">🚀 Universal Server running on http://localhost:3000</span></li>
+    </ol>
+
+    <h3>Step C: Start the App (The Frontend)</h3>
+    <ol>
+        <li>Click the <strong>+ (Plus)</strong> icon on the terminal (top right of the terminal panel) to open a <em>second</em> window.</li>
+        <li>Type: <code>npm run dev</code></li>
+        <li>Press <strong>Enter</strong>.</li>
+        <li>You will see a Local URL (e.g., <code>http://localhost:5173</code>). <strong>Ctrl + Click</strong> that link to open the app in your browser.</li>
+    </ol>
+
+    <h2>6. Using the App (For Doctors)</h2>
+
+    <div class="note">
+        <strong>Tip:</strong> You can create unlimited "Projects" (Audits) inside the app. Each one is separate.
+    </div>
+
+    <h3>Creating a New Study</h3>
+    <ol>
+        <li>Log in with your Master Password.</li>
+        <li>Click <strong>"New Project"</strong>.</li>
+        <li>Give it a name (e.g., "Anemia Audit 2026").</li>
+        <li><strong>Define your Fields:</strong>
+            <ul>
+                <li>Click "Add Field".</li>
+                <li>Type "Hemoglobin", select "Number".</li>
+                <li>Type "Ferritin", select "Number".</li>
+                <li>Type "Smoker?", select "Yes/No".</li>
+            </ul>
+        </li>
+        <li>Click <strong>Save Project</strong>.</li>
+    </ol>
+
+    <h3>Collecting Data</h3>
+    <ol>
+        <li>Click <strong>"Collect Data"</strong> on your project.</li>
+        <li>Enter the patient details.</li>
+        <li>Click <strong>Save</strong>.
+            <ul>
+                <li>✅ <em>Green Checkmark</em> = Saved to the SQL Database safely.</li>
+                <li>❌ <em>Red X</em> = Connection error (Check if <code>node server.js</code> is running).</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Exporting to Excel</h3>
+    <ol>
+        <li>Click <strong>"View Data"</strong>.</li>
+        <li>Click the <strong>"Export to Excel"</strong> button.</li>
+        <li>The app will automatically organize all your random fields into neat columns (<code>.csv</code> file) ready for analysis.</li>
+    </ol>
+
+    <h2>7. Troubleshooting Common Issues</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Problem</th>
+                <th>Solution</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>"Connection Failed" Error</strong></td>
+                <td>1. Is <code>node server.js</code> running in the terminal?<br>2. Is the Database Password in <code>server.js</code> correct?</td>
+            </tr>
+            <tr>
+                <td><strong>"Save Failed: Table doesn't exist"</strong></td>
+                <td>You skipped <strong>Step 3</strong>. Run the SQL code to create the <code>study_records</code> table.</td>
+            </tr>
+            <tr>
+                <td><strong>"Network Error" on Phone</strong></td>
+                <td>Ensure your phone is on the same WiFi as the laptop. You may need to use the Laptop's IP address (e.g., <code>192.168.1.15:5173</code>) instead of <code>localhost</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Generated by Gemini AI for Logify MD | &copy; 2026
+    </div>
+
+</div>
+
+</body>
+</html>
+"""
+
+with open('Logify_MD_User_Manual.html', 'w') as f:
+    f.write(html_content)
+
+print("Logify_MD_User_Manual.html created successfully.")

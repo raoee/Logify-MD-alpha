@@ -1,0 +1,12 @@
+# Dependencies (Massive folder, do not upload)
+node_modules/
+
+# Build Output (We build this fresh on the server)
+dist/
+
+# Environment Variables (Contains Passwords! KEEP PRIVATE)
+.env
+
+# Logs and System Files
+*.log
+.DS_Store
