@@ -469,7 +469,6 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
   useEffect(() => {
     const fetchRecords = async () => {
        try {
-         // Make sure there is a quote ' after records/ and a + sign
          const response = await fetch('/api/records/' + project.id);
          const sqlRows = await response.json();
 
@@ -491,29 +490,18 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
     fetchRecords();
   }, [project.id]);
 
-  // 2. The Export Function (Makes the Excel File)
+  // 2. The Export Function
   const handleExport = () => {
     if (records.length === 0) return alert("No data to export!");
-
-    // A. Create the Headers (Row 1)
-    // We use the Project Schema to ensure columns are in the right order
     const headers = ["Record ID", "Date Created", ...project.schema.fields.map(f => f.label)];
-    
-    // B. Create the Data (Rows 2+)
     const csvRows = records.map(r => {
       const createdDate = new Date(r.createdAt).toLocaleDateString();
-      
-      // Get data for each column defined in the schema
       const fieldValues = project.schema.fields.map(f => {
         const val = r.data[f.id] ? r.data[f.id].toString() : "";
-        // Escape quotes so they don't break the CSV format
         return `"${val.replace(/"/g, '""')}"`;
       });
-
       return [r.id, createdDate, ...fieldValues].join(",");
     });
-
-    // C. Combine and Download
     const csvContent = [headers.join(","), ...csvRows].join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -526,16 +514,16 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 min-h-[50vh]">
+    // CHANGE 1: Reduced padding (p-3) for mobile, kept p-6 for desktop
+    <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-200 min-h-[50vh]">
        <div className="mb-6 flex justify-between items-center">
          <div className="flex items-center gap-4">
             <h3 className="font-bold text-gray-800">Recorded Data ({records.length})</h3>
             {loading && <span className="text-sm text-blue-600 animate-pulse">Loading...</span>}
          </div>
          
-         {/* THE NEW EXPORT BUTTON */}
          <Button onClick={handleExport} variant="secondary" className="text-sm">
-           <Icons.Download /> Export to Excel
+           <Icons.Download /> <span className="hidden sm:inline">Export CSV</span>
          </Button>
        </div>
 
@@ -544,31 +532,37 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
             No records found.
           </div>
        ) : (
-         <div className="overflow-x-auto">
-           <table className="w-full text-sm text-left">
-             <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-               <tr>
-                 {project.schema.fields.map(f => (
-                   <th key={f.id} className="px-4 py-3 whitespace-nowrap">{f.label}</th>
-                 ))}
-                 <th className="px-4 py-3 whitespace-nowrap">Created</th>
-               </tr>
-             </thead>
-             <tbody>
-               {records.map(r => (
-                 <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    {project.schema.fields.map(f => (
-                      <td key={f.id} className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {r.data[f.id]?.toString() || '-'}
-                      </td>
-                    ))}
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                      {new Date(r.createdAt).toLocaleDateString()}
-                    </td>
+         // CHANGE 2: The Magic Wrapper for Scrolling
+         // - overflow-x-auto: Enables horizontal scroll
+         // - -mx-3: Pulls the table to the edge of the screen on mobile
+         <div className="overflow-x-auto -mx-3 md:mx-0 pb-4">
+           <div className="inline-block min-w-full align-middle px-3 md:px-0">
+             <table className="min-w-full text-sm text-left">
+               <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+                 <tr>
+                   {project.schema.fields.map(f => (
+                     // CHANGE 3: whitespace-nowrap prevents text from wrapping, forcing the table to be wide
+                     <th key={f.id} className="px-4 py-3 whitespace-nowrap font-bold border-b">{f.label}</th>
+                   ))}
+                   <th className="px-4 py-3 whitespace-nowrap font-bold border-b">Created</th>
                  </tr>
-               ))}
-             </tbody>
-           </table>
+               </thead>
+               <tbody className="divide-y divide-gray-100">
+                 {records.map(r => (
+                   <tr key={r.id} className="hover:bg-gray-50">
+                      {project.schema.fields.map(f => (
+                        <td key={f.id} className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                          {r.data[f.id]?.toString() || '-'}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
          </div>
        )}
     </div>
