@@ -465,7 +465,7 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
   const [records, setRecords] = useState<PatientRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Data from Server
+  // 1. Fetch Data
   useEffect(() => {
     const fetchRecords = async () => {
        try {
@@ -482,7 +482,6 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
          setRecords(mappedData);
        } catch (e) {
          console.error("Failed to load records", e);
-         alert("Could not load data from server.");
        } finally {
          setLoading(false);
        }
@@ -490,9 +489,9 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
     fetchRecords();
   }, [project.id]);
 
-  // 2. The Export Function
+  // 2. Export Function
   const handleExport = () => {
-    if (records.length === 0) return alert("No data to export!");
+    if (records.length === 0) return alert("No data!");
     const headers = ["Record ID", "Date Created", ...project.schema.fields.map(f => f.label)];
     const csvRows = records.map(r => {
       const createdDate = new Date(r.createdAt).toLocaleDateString();
@@ -502,69 +501,59 @@ const DataView = ({ project, onBack }: { project: Project, onBack: () => void })
       });
       return [r.id, createdDate, ...fieldValues].join(",");
     });
-    const csvContent = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([[headers.join(","), ...csvRows].join("\n")], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${project.name.replace(/\s+/g, "_")}_Export.csv`);
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = `${project.name}_Export.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
   return (
-    // CHANGE 1: Reduced padding (p-3) for mobile, kept p-6 for desktop
-    <div className="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-200 min-h-[50vh]">
-       <div className="mb-6 flex justify-between items-center">
-         <div className="flex items-center gap-4">
-            <h3 className="font-bold text-gray-800">Recorded Data ({records.length})</h3>
-            {loading && <span className="text-sm text-blue-600 animate-pulse">Loading...</span>}
-         </div>
-         
-         <Button onClick={handleExport} variant="secondary" className="text-sm">
-           <Icons.Download /> <span className="hidden sm:inline">Export CSV</span>
-         </Button>
+    <div className="space-y-4">
+       {/* 1. Header Card */}
+       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center">
+          <h3 className="font-bold text-gray-800">Records ({records.length})</h3>
+          <Button onClick={handleExport} variant="secondary" className="text-xs px-3 py-1">
+             Download CSV
+          </Button>
        </div>
 
-       {records.length === 0 && !loading ? (
-          <div className="text-center py-12 text-gray-400">
-            No records found.
-          </div>
-       ) : (
-         // CHANGE 2: The Magic Wrapper for Scrolling
-         // - overflow-x-auto: Enables horizontal scroll
-         // - -mx-3: Pulls the table to the edge of the screen on mobile
-         <div className="overflow-x-auto -mx-3 md:mx-0 pb-4">
-           <div className="inline-block min-w-full align-middle px-3 md:px-0">
-             <table className="min-w-full text-sm text-left">
-               <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+       {/* 2. The Table - Explicitly Scrollable */}
+       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* 'overflow-x-auto' here is the key for side-scrolling */}
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-full divide-y divide-gray-200">
+               <thead className="bg-gray-50">
                  <tr>
                    {project.schema.fields.map(f => (
-                     // CHANGE 3: whitespace-nowrap prevents text from wrapping, forcing the table to be wide
-                     <th key={f.id} className="px-4 py-3 whitespace-nowrap font-bold border-b">{f.label}</th>
+                     // 'whitespace-nowrap' forces columns to be wide, triggering the scrollbar
+                     <th key={f.id} className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                       {f.label}
+                     </th>
                    ))}
-                   <th className="px-4 py-3 whitespace-nowrap font-bold border-b">Created</th>
+                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Created</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-gray-100">
+               <tbody className="bg-white divide-y divide-gray-200">
                  {records.map(r => (
                    <tr key={r.id} className="hover:bg-gray-50">
                       {project.schema.fields.map(f => (
-                        <td key={f.id} className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        <td key={f.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {r.data[f.id]?.toString() || '-'}
                         </td>
                       ))}
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(r.createdAt).toLocaleDateString()}
                       </td>
                    </tr>
                  ))}
                </tbody>
-             </table>
-           </div>
-         </div>
-       )}
+            </table>
+            {records.length === 0 && !loading && (
+              <div className="p-8 text-center text-gray-400">No records found.</div>
+            )}
+          </div>
+       </div>
     </div>
   );
 };
